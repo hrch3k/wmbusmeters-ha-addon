@@ -50,17 +50,25 @@ jobs:
           args: |
             --${{ matrix.arch }} \
             --target wmbusmeters-ha-addon-edge \
-            --version ${{ steps.version.outputs.version }} \
-            --docker-hub ignore
+            --version ${{ steps.version.outputs.version }}
+
+      - name: Find built image
+        id: image
+        run: |
+          IMAGE_NAME=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "homeassistant/${{ matrix.arch }}-addon-wmbusmeters-ha-addon-edge" | head -1)
+          echo "image=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Found image: $IMAGE_NAME"
 
       - name: Tag and push to GHCR
         run: |
-          LOCAL_IMAGE="homeassistant/${{ matrix.arch }}-addon-wmbusmeters-ha-addon-edge:${{ steps.version.outputs.version }}"
+          LOCAL_IMAGE="${{ steps.image.outputs.image }}"
           GHCR_IMAGE_VERSIONED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:${{ steps.version.outputs.version }}"
           GHCR_IMAGE_LATEST="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:latest"
           
+          echo "Tagging $LOCAL_IMAGE as $GHCR_IMAGE_VERSIONED"
           docker tag "$LOCAL_IMAGE" "$GHCR_IMAGE_VERSIONED"
           docker tag "$LOCAL_IMAGE" "$GHCR_IMAGE_LATEST"
           
+          echo "Pushing to GHCR..."
           docker push "$GHCR_IMAGE_VERSIONED"
           docker push "$GHCR_IMAGE_LATEST"
