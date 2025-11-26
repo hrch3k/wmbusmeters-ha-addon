@@ -9,6 +9,7 @@
     "amd64"
   ],
   "url": "https://github.com/hrch3k/wmbusmeters-ha-addon",
+  "image": "ghcr.io/hrch3k/wmbusmeters-ha-addon-edge-{arch}",
   "panel_icon": "mdi:home-automation",
   "init": false,
   "ingress": true,

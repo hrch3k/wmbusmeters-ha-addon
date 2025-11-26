@@ -1,0 +1,68 @@
+name: Build and Push to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wmbusmeters-ha-addon-edge/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/wmbusmeters-ha-addon-edge
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        arch: [amd64, armv7, aarch64]
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: armv7
+            platform: linux/arm/v7
+          - arch: aarch64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from config.json
+        id: version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' wmbusmeters-ha-addon-edge/config.json | cut -d'"' -f4)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./wmbusmeters-ha-addon-edge
+          file: ./wmbusmeters-ha-addon-edge/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:latest
+          build-args: |
+            BUILD_FROM=homeassistant/${{ matrix.arch }}-base:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
