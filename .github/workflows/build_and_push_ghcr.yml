@@ -22,16 +22,6 @@ jobs:
     strategy:
       matrix:
         arch: [amd64, armv7, aarch64]
-        include:
-          - arch: amd64
-            platform: linux/amd64
-            base_image: homeassistant/amd64-base:latest
-          - arch: armv7
-            platform: linux/arm/v7
-            base_image: homeassistant/armv7-base:latest
-          - arch: aarch64
-            platform: linux/arm64
-            base_image: homeassistant/aarch64-base:latest
 
     steps:
       - name: Checkout repository
@@ -54,17 +44,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build HA add-on using builder
+        uses: home-assistant/builder@master
         with:
-          context: ./wmbusmeters-ha-addon-edge
-          file: ./wmbusmeters-ha-addon-edge/Dockerfile
-          platforms: ${{ matrix.platform }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:latest
-          build-args: |
-            BUILD_FROM=${{ matrix.base_image }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          args: |
+            --${{ matrix.arch }} \
+            --target wmbusmeters-ha-addon-edge \
+            --version ${{ steps.version.outputs.version }} \
+            --docker-hub ignore
+
+      - name: Tag and push to GHCR
+        run: |
+          LOCAL_IMAGE="homeassistant/${{ matrix.arch }}-addon-wmbusmeters-ha-addon-edge:${{ steps.version.outputs.version }}"
+          GHCR_IMAGE_VERSIONED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:${{ steps.version.outputs.version }}"
+          GHCR_IMAGE_LATEST="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.arch }}:latest"
+          
+          docker tag "$LOCAL_IMAGE" "$GHCR_IMAGE_VERSIONED"
+          docker tag "$LOCAL_IMAGE" "$GHCR_IMAGE_LATEST"
+          
+          docker push "$GHCR_IMAGE_VERSIONED"
+          docker push "$GHCR_IMAGE_LATEST"
