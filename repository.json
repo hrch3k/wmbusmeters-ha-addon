@@ -1,6 +1,6 @@
 {
   "name": "Wmbusmeters (W-MBus to MQTT)",
-  "description": "Acquire utility meter readings using the wireless mbus protocol (WMBUS)",
-  "url": "https://github.com/wmbusmeters/wmbusmeters-ha-addon",
-  "maintainer": "weetmuts"
+  "description": "Acquire utility meter readings using the wireless mbus protocol (WMBUS) - Custom build with zenner0b driver",
+  "url": "https://github.com/hrch3k/wmbusmeters-ha-addon",
+  "maintainer": "hrch3k"
 }
